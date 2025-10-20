@@ -48,7 +48,7 @@ print("Vehicle armed!")
 #     time.sleep(1)
 # print("Starting test sequence now!\n")
 
-# --- Function to send body-frame velocity ---
+# # --- Function to send body-frame velocity ---
 # def send_velocity(vx, vy, vz, duration=1):
 #     """
 #     vx: forward
@@ -73,7 +73,7 @@ print("Vehicle armed!")
 #         time.sleep(0.1)
 
 # --- Function to send attitude/thrust commands ---
-def send_attitude_target(roll=0.0, pitch=0.0, yaw_rate=0.0, thrust=0.5, duration=1):
+def send_attitude_target(roll=0.0, pitch=0.0, yaw_rate=0.0, thrust=0.0, duration=1):
     """
     roll, pitch in radians
     yaw_rate in rad/s
@@ -81,6 +81,9 @@ def send_attitude_target(roll=0.0, pitch=0.0, yaw_rate=0.0, thrust=0.5, duration
     duration: seconds
     """
     q = to_quaternion(roll, pitch, 0)
+
+    print(f"Quaternion (q): w={q[0]:.4f}, x={q[1]:.4f}, y={q[2]:.4f}, z={q[3]:.4f}")
+
     msg = vehicle.message_factory.set_attitude_target_encode(
         0,
         0, 0,
@@ -112,13 +115,19 @@ def send_attitude_target(roll=0.0, pitch=0.0, yaw_rate=0.0, thrust=0.5, duration
 
 # 2. Hover/throttle test
 print("\n--- Hover throttle test ---")
-send_attitude_target(thrust=0.6, duration=5)  # mid throttle (hover-level)
+send_attitude_target(thrust=0.2, duration=5)  # mid throttle (hover-level)
 
-send_attitude_target(thrust=0, duration=5)  # mid throttle (hover-level)
+send_attitude_target(thrust=0, duration=5) 
 
-send_attitude_target(thrust=0.6, duration=5)  # mid throttle (hover-level)
+print("\n--- Pitch test ---")
+send_attitude_target(pitch=0.2, duration=5) 
 
-send_attitude_target(thrust=0, duration=10)  # mid throttle (hover-level)
+send_attitude_target(pitch=-0.2, duration=5) 
+
+print("\n--- Yaw rate test ---")
+send_attitude_target(yaw_rate=0.2, duration=5) 
+
+# send_attitude_target(yaw_rate=-0.3, duration=5)  
 
 # # 3. Stop motion
 # print("\n--- Stopping (hover/idle) ---")

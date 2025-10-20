@@ -5,3 +5,5 @@ __pycache__/
 *.pyd
 yolo4/
 .git_corrupt/
+Detect_Drone/runs/
+Detect_Drone/runs/detect/

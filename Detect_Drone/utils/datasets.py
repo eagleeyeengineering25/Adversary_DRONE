@@ -24,8 +24,11 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from utils.general import check_requirements, check_file, check_dataset, xywh2xyxy, xywhn2xyxy, xyxy2xywhn, \
-    xyn2xy, segment2box, segments2boxes, resample_segments, clean_str
+    xyn2xy, segment2box, segments2boxes, resample_segments, clean_str, check_imshow
 from utils.torch_utils import torch_distributed_zero_first
+
+# Detect once whether environment supports cv2.imshow / cv2.waitKey
+IMSHOW = check_imshow()
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -227,7 +230,8 @@ class LoadWebcam:  # for inference
 
     def __next__(self):
         self.count += 1
-        if cv2.waitKey(1) == ord('q'):  # q to quit
+        # Only call cv2.waitKey if GUI display is supported (avoids headless errors)
+        if IMSHOW and cv2.waitKey(1) == ord('q'):  # q to quit
             self.cap.release()
             cv2.destroyAllWindows()
             raise StopIteration
@@ -332,8 +336,10 @@ class LoadStreams:  # multiple IP or RTSP cameras
 
     def __next__(self):
         self.count += 1
-        if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
-            cv2.destroyAllWindows()
+        # Avoid cv2.waitKey() call when running headless; only check threads in that case
+        if not all(x.is_alive() for x in self.threads) or (IMSHOW and cv2.waitKey(1) == ord('q')):  # q to quit
+            if IMSHOW:
+                cv2.destroyAllWindows()
             raise StopIteration
 
         # Letterbox

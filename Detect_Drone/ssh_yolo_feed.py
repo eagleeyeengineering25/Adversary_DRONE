@@ -4,8 +4,14 @@ import struct
 import time
 import cv2
 import numpy as np
-from detect_test import run as yolo_run  # your existing detect_test.py
-
+from detect_test_jetty import run as yolo_run  # your existing detect_test_jetty.py
+"""
+command to run after activating the virtual environment:
+ON JETSON NANO (SERVER SIDE):
+python3 /home/eagle/Adversary_DRONE/Detect_Drone/ssh_yolo_feed.py --server --host 127.0.0.1 --port 5000 --device 0 --quality 60 --weights /home/eagle/Adversary_DRONE/Detect_Drone/best.pt
+ON LOCAL MACHINE (CLIENT SIDE):
+python3 ssh_yolo_feed.py --client --host 127.0.0.1 --port 5000
+"""
 DEFAULT_PORT = 5000
 HEADER_FMT = "!I"  # 4-byte length header
 

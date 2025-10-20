@@ -70,7 +70,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
 
     # Initialize
     set_logging()
-    force_cpu = True  # Set this to True to force CPU usage
+    force_cpu = False  # Set this to True to force CPU usage
     device = torch.device('cpu') if force_cpu else select_device(device)
     print(f'Using device: {device}, CUDA available: {not force_cpu and torch.cuda.is_available()}')
     if not force_cpu and torch.cuda.is_available():

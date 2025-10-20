@@ -8,9 +8,9 @@ import cv2
 import numpy as np
 
 #!/usr/bin/env python3
-"""
+r"""
 ssh_feed.py
-#Copy the file on local
+#Copy the file on local only needed once (step1 for both ssh_feed.py and ssh_yolo_feed.py)
 scp eagle@10.250.240.81:/home/eagle/Adversary_DRONE/Detect_Drone/ssh_feed.py C:\Users\savya\Downloads\ssh_feed.py  
 
 Run on the companion (camera-connected) as a server:

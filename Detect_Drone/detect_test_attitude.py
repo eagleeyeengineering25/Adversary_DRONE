@@ -4,7 +4,6 @@ Usage:
     $ Example: python path/to/detect.py --source path/to/img.jpg --weights yolov5s.pt --img 640
     
     Activate the virtual environment first:
-    $ cd Adversary_DRONE/
     $ source venv/bin/activate
     
     $ cd Adversary_DRONE/Detect_Drone/
@@ -158,6 +157,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
         hide_labels=False,  # hide labels
         hide_conf=False,  # hide confidences
         half=False,  # use FP16 half-precision inference
+        
+        frame_callback: Optional[Callable] = None,  # optional per-frame callback(frame) -> bool/None
+	    draw: bool = True,  # whether to draw boxes/labels on frames
         ):
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
@@ -168,8 +170,15 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Initialize
+    # set_logging()
+    # device = select_device(device)
+    # half &= device.type != 'cpu'  # half precision only supported on CUDA
     set_logging()
-    device = select_device(device)
+    force_cpu = False  # Set this to True to force CPU usage
+    device = torch.device('cpu') if force_cpu else select_device(device)
+    print(f'Using device: {device}, CUDA available: {not force_cpu and torch.cuda.is_available()}')
+    if not force_cpu and torch.cuda.is_available():
+        print(f'CUDA device: {torch.cuda.get_device_name()}')
     half &= device.type != 'cpu'  # half precision only supported on CUDA
 
     # Load model
@@ -232,10 +241,9 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
             
-            
+            # Get frame height and width and display on frame
             frame_h, frame_w = im0.shape[:2]
             cv2.putText(im0, f"Frame: {frame_w}x{frame_h}", (10,60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-            
             
             if len(det):
                 # Rescale boxes from img_size to im0 size
@@ -275,7 +283,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     - Adjust thrust for vertical alignment (y-axis)
                     - Keep roll = 0 for stability
                     """
-
                     err_x = x_center - (frame_w // 2) # gets difference from center points in x axis (pixels)
                     err_y = y_center - (frame_h // 2) # gets difference from center points in y axis (pixels)
                     
@@ -290,12 +297,12 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     Kp_yaw = 0.001     # yaw rate (horizontal centering)
 
                     # Convert image-space errors to attitude commands
-                    pitch = -Kp_pitch * err_z      # forward/backward tilt
+                    pitch = -Kp_pitch * err_z               # forward/backward tilt
                     roll = 0.0
-                    yaw_rate = Kp_yaw * err_x      # turning left/right
+                    yaw_rate = Kp_yaw * err_x               # turning left/right
                     thrust = 0.25 + (Kp_thrust * (-err_y))  # small correction for altitude
 
-                    # # --- Clip values to safe ranges ---
+                    # --- Clip values to safe ranges ---
                     pitch    = np.clip(pitch, -0.3, 0.3)
                     yaw_rate = np.clip(yaw_rate, -0.5, 0.5)
                     thrust   = np.clip(thrust, 0.2, 0.6)
@@ -323,13 +330,17 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                     elif yaw_rate < -0.05:
                         direction.append("yawing left")
                     action_text = "Drone " + " + ".join(direction) if direction else "Drone holding attitude"
-                    # Ex: Drone moving 
+                    # Ex: Drone moving yawing right + pitching forward
                     print(f"{action_text} | pitch={math.degrees(pitch):.1f}°, thrust={thrust:.2f}, yaw_rate={yaw_rate:.2f} rad/s")
                     cv2.putText(im0, action_text, (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0,255,255), 2)
                 
 
-                    # Send to cube
-                    send_attitude_target(vehicle, roll, pitch, yaw_rate, thrust)
+                    # Send to cube (with short command rate limit, commands are only sent ever 0.1s/100ms)
+                    last_send_time = 0
+                    current_time = time.time()
+                    if current_time - last_send_time >= 0.1:  # send every 0.1 seconds
+                        send_attitude_target(vehicle, roll, pitch, yaw_rate, thrust)
+                        last_send_time = current_time
                     #-----------------------------------------------------------
 
                     if save_img or save_crop or view_img:
@@ -345,7 +356,6 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
                 send_attitude_target(vehicle, 0, 0, 0, 0.3)
                 #time.sleep(0.1)
 
-
             # Print time (inference + NMS)
             #print(f'{s}Done. ({t2 - t1:.3f}s)')
 
@@ -356,13 +366,22 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             #cv2.putText(im0, f"Center: ({x_center},{y_center})", (10,60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
             # Print time (inference + NMS)
-            print(f'{s}Done. ({t2 - t1:.3f}s) FPS: {fps:.2f}')
+            if frame_callback is None:
+                print(f'{s}Done. ({t2 - t1:.3f}s) FPS: {fps:.2f}')
             
             # ***also print FPS in terminal
             #print(f"FPS: {fps:.2f}")
 
             # Stream results
-            if view_img:
+            if frame_callback is not None:
+                try:
+                    cont = frame_callback(im0)
+                    if cont is False:
+                        break
+                except Exception as e:
+                    print(f"frame callback error: {e}")
+                    break
+            elif view_img:
                 # ***add center marker
                 h, w, _ = im0.shape
                 cv2.circle(im0, (w//2, h//2), 5, (255, 0, 0), -1)

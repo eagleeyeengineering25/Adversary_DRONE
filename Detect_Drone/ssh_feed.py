@@ -24,6 +24,7 @@ On the laptop, forward the port over SSH and run the client:
 
     #optionally, if you have ssh key setup and want only one active terminal window use:
     Start-Job { ssh -N -L 5000:127.0.0.1:5000 eagle@10.250.240.81 } ; cd "$env:USERPROFILE\Downloads" ; python ssh_feed.py --client --host 127.0.0.1 --port 5000
+    
     #run following commands to setup key 
     ssh-keygen -t ed25519
     type $env:USERPROFILE\.ssh\id_ed25519.pub | ssh eagle@10.250.240.81 "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys"

@@ -57,7 +57,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
     hide_labels=False,  # hide labels
     hide_conf=False,  # hide confidences
     half=False,  # use FP16 half-precision inference
-    frame_callback: Optional[Callable] = None,  # optional per-frame callback(frame) -> bool/None
+    frame_callback: Optional[Callable] = None,  # optional per-frame callback(frame, det, names, frame_w, frame_h) -> bool/None
     draw: bool = True,  # whether to draw boxes/labels on frames
     ):
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -209,7 +209,7 @@ def run(weights='yolov5s.pt',  # model.pt path(s)
             # Stream or display results
             if frame_callback is not None:
                 try:
-                    cont = frame_callback(im0)
+                    cont = frame_callback(im0, det, names, frame_w, frame_h)
                     if cont is False:
                         break
                 except Exception as e:

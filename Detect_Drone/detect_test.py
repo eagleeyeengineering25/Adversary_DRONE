@@ -7,7 +7,7 @@ Usage:
     $ python detect_test.py --weights best.pt --source 0 --max-det 1 --imgsz 320 --nosave
 """
 
-# Revision: added to bypass UnpicklingError: Weights only load failed
+# Bypass "UnpicklingError: Weights only load failed"
 import os
 os.environ["TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD"] = "1"
 
